@@ -1,0 +1,59 @@
+{
+  "seed": 42,
+  "val_ratio": 0.2,
+  "method": "stratified (per-class)",
+  "datasets": {
+    "iris": {
+      "total": 150,
+      "train": {
+        "count": 120,
+        "per_class": {
+          "Iris-setosa": 40,
+          "Iris-versicolor": 40,
+          "Iris-virginica": 40
+        }
+      },
+      "val": {
+        "count": 30,
+        "per_class": {
+          "Iris-setosa": 10,
+          "Iris-versicolor": 10,
+          "Iris-virginica": 10
+        }
+      }
+    },
+    "mnist": {
+      "total": 60000,
+      "train": {
+        "count": 48000,
+        "per_class": {
+          "0": 4738,
+          "1": 5394,
+          "2": 4766,
+          "3": 4905,
+          "4": 4674,
+          "5": 4337,
+          "6": 4734,
+          "7": 5012,
+          "8": 4681,
+          "9": 4759
+        }
+      },
+      "val": {
+        "count": 12000,
+        "per_class": {
+          "0": 1185,
+          "1": 1348,
+          "2": 1192,
+          "3": 1226,
+          "4": 1168,
+          "5": 1084,
+          "6": 1184,
+          "7": 1253,
+          "8": 1170,
+          "9": 1190
+        }
+      }
+    }
+  }
+}
