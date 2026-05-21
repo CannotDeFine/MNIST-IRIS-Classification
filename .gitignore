@@ -1,0 +1,32 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- uv / 虚拟环境 ----
+# .venv 是本机专属（含平台相关二进制），每位成员用 `uv sync` 自行生成
+.venv/
+venv/
+env/
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+
+# ---- 实验输出（如需共享结果可注释掉下面一行）----
+results/*
+!results/.gitkeep
+
+# ---- 操作系统 ----
+.DS_Store
+Thumbs.db
+
+# ---- 编辑器 / IDE ----
+.idea/
+.vscode/
+*.swp
