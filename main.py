@@ -1,5 +1,4 @@
-def main():
-    print("Hello from project-3-2026!")
+from src.classification_nn import main
 
 
 if __name__ == "__main__":

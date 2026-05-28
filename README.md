@@ -28,6 +28,35 @@ uv run python main.py          # 直接运行脚本
 uv run python src/xxx.py       # 运行 src 下的实现
 ```
 
+训练简易神经网络分类器：
+
+```bash
+# 训练 iris 与 MNIST（默认写出 results/classification_nn_metrics.json）
+uv run python main.py --dataset all
+
+# 快速检查 MNIST 流程，可只取一部分样本
+uv run python main.py --dataset mnist --mnist-limit 1000 --epochs 2
+
+# 只训练 iris
+uv run python main.py --dataset iris
+
+# 只查看训练前基线准确率（epoch 000）
+uv run python main.py --dataset all --mnist-limit 1000 --epochs 0
+
+# 训练并保存参数、预处理信息
+uv run python main.py --dataset mnist --mnist-limit 1000 --epochs 1 \
+  --model-output results/models/mnist_mlp.npz
+
+# 重新加载参数，在验证集上独立评估
+uv run python main.py --load-model results/models/mnist_mlp.npz --eval-split val
+```
+
+当前模型位于 `src/classification_nn.py`，使用 NumPy 实现两层 MLP
+（输入层 -> ReLU 隐藏层 -> softmax 输出层），并复用 `src/data_split.py`
+中的 iris / MNIST 训练集和验证集划分。训练日志从 `epoch 000` 开始，
+表示参数初始化后、尚未做梯度更新时的基线准确率。
+模型优化与消融实验说明见 `docs/classification_nn_experiments.md`。
+
 新增依赖（会同时更新 `pyproject.toml` 和 `uv.lock`，记得提交这两个文件）：
 
 ```bash
