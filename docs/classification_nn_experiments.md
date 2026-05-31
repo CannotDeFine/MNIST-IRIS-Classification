@@ -5,8 +5,11 @@
 
 ## 1. 当前模型范围
 
-当前实现只使用 NumPy，没有使用 PyTorch、TensorFlow、Adam、Momentum、CNN、
-BatchNorm 或数据增强。训练算法是 mini-batch SGD，损失函数是 softmax 交叉熵。
+当前实现只使用 NumPy，没有使用 PyTorch、TensorFlow、Adam、BatchNorm 或数据增强。
+主线模型是单隐藏层 MLP，训练算法以 mini-batch SGD 为基础，可选 momentum、
+学习率衰减和 early stopping。基础损失函数是 softmax 交叉熵，主模型可选加入
+L2 正则化，使优化目标变为交叉熵加权重平方惩罚。CNN 作为独立扩展实现，不混入
+MLP 主线。
 
 当前主入口：
 
@@ -16,10 +19,10 @@ uv run python main.py --dataset all
 
 对应默认配置如下：
 
-| 数据集 | 输入                      | 预处理                          | 模型                                | 默认 epoch | 学习率 | batch size |
-| ------ | ------------------------- | ------------------------------- | ----------------------------------- | ---------: | -----: | ---------: |
-| iris   | 4 个数值特征              | 用训练集均值/标准差标准化       | `4 -> ReLU(16) -> softmax(3)`     |        300 |   0.05 |         16 |
-| MNIST  | 28x28 灰度图展平为 784 维 | 像素除以 255，缩放到 `[0, 1]` | `784 -> ReLU(128) -> softmax(10)` |          5 |    0.1 |        128 |
+| 数据集 | 输入                      | 预处理                          | 模型                                | 默认 epoch | 学习率 | batch size | 默认 L2 |
+| ------ | ------------------------- | ------------------------------- | ----------------------------------- | ---------: | -----: | ---------: | ------: |
+| iris   | 4 个数值特征              | 用训练集均值/标准差标准化       | `4 -> ReLU(16) -> softmax(3)`     |        300 |   0.05 |         16 |       0 |
+| MNIST  | 28x28 灰度图展平为 784 维 | 像素除以 255，缩放到 `[0, 1]` | `784 -> ReLU(128) -> softmax(10)` |          5 |    0.1 |        128 |       0 |
 
 `fit()` 会先记录 `epoch 000`，表示初始化后、尚未做任何梯度更新时的准确率。
 因此 `epoch 001` 已经不是“初始准确率”，而是完整遍历训练集一遍后的结果。
@@ -87,6 +90,30 @@ MNIST 默认学习率 0.1 是一个偏快的教学配置。将学习率降为 0.
 的验证准确率会明显降低。这也是为什么你会看到 MNIST 精度上升很快：它不是高级优化器，
 而是合理缩放输入后，使用了较大的学习率和很多 mini-batch 更新。
 
+### 2.8 L2 正则化
+
+当前 MLP 可以通过 `--l2` 或实验配置中的 `l2` 参数加入 L2 权重惩罚：
+
+```text
+loss = cross_entropy + λ/2 * (||W1||² + ||W2||²)
+dW1 = dW1_data + λW1
+dW2 = dW2_data + λW2
+```
+
+这里的 `λ` 控制正则化强度。L2 不改变网络结构，而是改变优化目标，限制权重无限增大。
+实验中主要观察训练准确率、验证准确率以及二者差距是否变化。若 `λ` 太大，模型会欠拟合；
+若 `λ` 太小，效果可能不明显。
+
+### 2.9 高级训练策略
+
+当前 `MLPClassifier` 默认仍使用 mini-batch SGD。为了做优化策略对比，模型还支持：
+
+- `optimizer="momentum"`：使用 momentum SGD，累积历史梯度方向。
+- `lr_decay`：使用 `α_t = α_0 / (1 + decay * t)` 的反比例学习率衰减。
+- `early_stopping_patience`：验证集 loss 连续若干 epoch 未改善时提前停止。
+
+这些策略不改变网络结构，只改变参数更新路径，适合放在最优化课程报告中讨论。
+
 ## 3. 消融实验实现
 
 消融脚本位于：
@@ -98,7 +125,7 @@ src/classification_experiments.py
 它实现了：
 
 - `SoftmaxRegressionClassifier`：线性 softmax 基线。
-- `ExperimentConfig`：每个实验的模型、学习率、batch size、预处理和初始化配置。
+- `ExperimentConfig`：每个实验的模型、学习率、batch size、预处理、初始化和 L2 配置。
 - `build_experiment_configs()`：生成 iris / MNIST 的标准消融配置。
 - `run_experiment()`：加载固定训练/验证划分，训练并返回初始/最终指标。
 - Markdown 与 JSON 输出，便于写报告或复现实验。
@@ -119,6 +146,12 @@ checkpoint 中包含 iris 的标准化均值/标准差和标签映射；MNIST ch
 - MNIST：使用训练集前 1000 张和验证集前 1000 张，训练 5 epoch。
 - `mnist_no_pixel_scaling` 只训练 1 epoch，因为使用原始 0-255 像素和当前学习率
   已经足以展示该消融会破坏训练尺度。
+- L2 消融默认使用 `iris_l2_regularization: λ=1e-3` 与
+  `mnist_l2_regularization: λ=1e-4`，作为温和权重惩罚的对比项。
+- `--suite l2-sweep` 会专门扫描多组 L2 系数，用于观察 `λ` 从很小到过大时的趋势。
+- `--suite lr-sweep` 扫描学习率，`--suite width-sweep` 扫描隐藏层宽度，
+  `--suite training-strategies` 对比普通 SGD、momentum、学习率衰减和 early stopping。
+- `--suite loss-comparison` 对比 `Sigmoid + MSE` 与 `Softmax + Cross-Entropy`。
 
 这个 profile 用于快速复现实验趋势，不是最终性能排行榜。最终性能应使用完整 MNIST
 划分重新运行。
@@ -162,6 +195,72 @@ uv run python main.py --dataset all
 uv run python main.py --dataset all --mnist-limit 1000 --epochs 0
 ```
 
+使用 L2 正则化训练，并将结果单独保存：
+
+```bash
+uv run python main.py \
+  --dataset all \
+  --l2 0.001 \
+  --output results/classification_nn_l2_metrics.json
+```
+
+扫描多组 L2 正则化系数：
+
+```bash
+uv run python src/classification_experiments.py \
+  --suite l2-sweep \
+  --dataset all \
+  --profile quick \
+  --output results/l2_sweep.json \
+  --markdown-output results/l2_sweep.md
+```
+
+扫描学习率、隐藏层宽度和训练策略：
+
+```bash
+uv run python src/classification_experiments.py \
+  --suite lr-sweep \
+  --dataset all \
+  --profile quick \
+  --output results/lr_sweep.json \
+  --markdown-output results/lr_sweep.md
+
+uv run python src/classification_experiments.py \
+  --suite width-sweep \
+  --dataset all \
+  --profile quick \
+  --output results/width_sweep.json \
+  --markdown-output results/width_sweep.md
+
+uv run python src/classification_experiments.py \
+  --suite training-strategies \
+  --dataset all \
+  --profile quick \
+  --output results/training_strategies.json \
+  --markdown-output results/training_strategies.md
+
+uv run python src/classification_experiments.py \
+  --suite loss-comparison \
+  --dataset all \
+  --profile quick \
+  --output results/loss_comparison.json \
+  --markdown-output results/loss_comparison.md
+```
+
+绘制学习曲线和混淆矩阵：
+
+```bash
+uv run python src/plot_results.py curves \
+  --metrics results/classification_nn_metrics.json \
+  --output-dir results/figures
+
+uv run python src/plot_results.py confusion \
+  --model results/models/iris_mlp.npz \
+  --split val \
+  --figure-dir results/figures \
+  --table-dir results/tables
+```
+
 训练并保存参数：
 
 ```bash
@@ -186,7 +285,8 @@ uv run python main.py \
 
 如果训练时使用了 `--mnist-limit 1000`，checkpoint 会记录这个设置；加载评估时默认
 使用相同的验证集前 1000 张样本。训练完整 MNIST 时不传 `--mnist-limit`，加载评估
-会使用完整验证划分。
+会使用完整验证划分。MNIST 还支持 `--eval-split test`，用于在官方 t10k 测试集上
+做最终评估；iris 没有单独官方测试集，因此只支持 `train` 和 `val`。
 
 注意：`results/` 默认被 `.gitignore` 忽略；实验结果文件用于本地复现和报告整理。
 
@@ -205,22 +305,24 @@ uv run python src/classification_experiments.py \
 运行环境：Python 3.12.13，uv 管理环境，随机种子 `42`，固定使用 `splits/` 中已有
 训练/验证划分。
 
-| Experiment               | Ablation                                    | Epochs |   LR | Batch | Initial val acc | Final val acc | Final train acc |
-| ------------------------ | ------------------------------------------- | -----: | ---: | ----: | --------------: | ------------: | --------------: |
-| iris_untrained_mlp       | all optimization steps after initialization |      0 | 0.05 |    16 |          0.4667 |        0.4667 |          0.4583 |
-| iris_linear_softmax      | hidden ReLU layer                           |    100 | 0.05 |    16 |          0.7333 |        0.9667 |          0.9417 |
-| iris_small_hidden        | 16-unit hidden representation               |    100 | 0.05 |    16 |          0.3333 |        0.9333 |          0.9583 |
-| iris_no_standardization  | feature standardization                     |    100 | 0.05 |    16 |          0.3333 |        0.9000 |          0.9500 |
-| iris_small_normal_init   | He initialization for ReLU layers           |    100 | 0.05 |    16 |          0.4667 |        1.0000 |          0.9667 |
-| iris_current_mlp         | none                                        |    100 | 0.05 |    16 |          0.4667 |        0.9667 |          0.9667 |
-| mnist_untrained_mlp      | all optimization steps after initialization |      0 |  0.1 |   128 |          0.1400 |        0.1400 |          0.1020 |
-| mnist_linear_softmax     | hidden ReLU layer and hidden width          |      5 |  0.1 |   128 |          0.1120 |        0.8340 |          0.8500 |
-| mnist_small_hidden       | wide 128-unit hidden representation         |      5 |  0.1 |   128 |          0.1130 |        0.7380 |          0.7690 |
-| mnist_slow_learning_rate | aggressive learning rate 0.1                |      5 | 0.01 |   128 |          0.1400 |        0.4340 |          0.4520 |
-| mnist_full_batch         | mini-batch SGD update frequency             |      5 |  0.1 |  1000 |          0.1400 |        0.4950 |          0.5190 |
-| mnist_small_normal_init  | He initialization for ReLU layers           |      5 |  0.1 |   128 |          0.1400 |        0.4110 |          0.4830 |
-| mnist_no_pixel_scaling   | pixel scaling to [0, 1]                     |      1 |  0.1 |   128 |          0.1400 |        0.1090 |          0.0960 |
-| mnist_current_mlp        | none                                        |      5 |  0.1 |   128 |          0.1400 |        0.8180 |          0.8480 |
+| Experiment               | Ablation                                    | Epochs |   LR |     L2 | Batch | Initial val acc | Final val acc | Final train acc |
+| ------------------------ | ------------------------------------------- | -----: | ---: | -----: | ----: | --------------: | ------------: | --------------: |
+| iris_untrained_mlp       | all optimization steps after initialization |      0 | 0.05 |      0 |    16 |          0.4667 |        0.4667 |          0.4583 |
+| iris_linear_softmax      | hidden ReLU layer                           |    100 | 0.05 |      0 |    16 |          0.7333 |        0.9667 |          0.9417 |
+| iris_small_hidden        | 16-unit hidden representation               |    100 | 0.05 |      0 |    16 |          0.3333 |        0.9333 |          0.9583 |
+| iris_no_standardization  | feature standardization                     |    100 | 0.05 |      0 |    16 |          0.3333 |        0.9000 |          0.9500 |
+| iris_small_normal_init   | He initialization for ReLU layers           |    100 | 0.05 |      0 |    16 |          0.4667 |        1.0000 |          0.9667 |
+| iris_l2_regularization   | unregularized objective                     |    100 | 0.05 |  0.001 |    16 |          0.4667 |        0.9667 |          0.9667 |
+| iris_current_mlp         | none                                        |    100 | 0.05 |      0 |    16 |          0.4667 |        0.9667 |          0.9667 |
+| mnist_untrained_mlp      | all optimization steps after initialization |      0 |  0.1 |      0 |   128 |          0.1400 |        0.1400 |          0.1020 |
+| mnist_linear_softmax     | hidden ReLU layer and hidden width          |      5 |  0.1 |      0 |   128 |          0.1120 |        0.8340 |          0.8500 |
+| mnist_small_hidden       | wide 128-unit hidden representation         |      5 |  0.1 |      0 |   128 |          0.1130 |        0.7380 |          0.7690 |
+| mnist_slow_learning_rate | aggressive learning rate 0.1                |      5 | 0.01 |      0 |   128 |          0.1400 |        0.4340 |          0.4520 |
+| mnist_full_batch         | mini-batch SGD update frequency             |      5 |  0.1 |      0 |  1000 |          0.1400 |        0.4950 |          0.5190 |
+| mnist_small_normal_init  | He initialization for ReLU layers           |      5 |  0.1 |      0 |   128 |          0.1400 |        0.4110 |          0.4830 |
+| mnist_no_pixel_scaling   | pixel scaling to [0, 1]                     |      1 |  0.1 |      0 |   128 |          0.1400 |        0.1090 |          0.0960 |
+| mnist_l2_regularization  | unregularized objective                     |      5 |  0.1 | 0.0001 |   128 |          0.1400 |        0.8180 |          0.8480 |
+| mnist_current_mlp        | none                                        |      5 |  0.1 |      0 |   128 |          0.1400 |        0.8180 |          0.8480 |
 
 ## 6. 结果解读
 
@@ -276,6 +378,166 @@ uv run python main.py --dataset mnist --epochs 5 --quiet --output /private/tmp/c
 ```text
 mnist: train_acc=0.9564, val_acc=0.9467
 ```
+
+### 6.7 L2 正则化是目标函数层面的扩展
+
+quick profile 中，`iris_l2_regularization` 与当前 iris MLP 的验证准确率同为 0.9667；
+`mnist_l2_regularization` 与当前 MNIST MLP 的验证准确率同为 0.8180。这个结果说明
+当前选取的 L2 系数较温和，在小样本 quick 设置下不会明显改变准确率。
+
+报告中不应把单次 quick 结果解读为“L2 一定无效”。更合理的说法是：L2 正则化改变了
+优化目标，理论上会抑制过大的权重；它的实际效果依赖数据规模、训练轮数、模型容量和
+`λ` 的选择。后续如果要更严谨比较，可以在完整 MNIST 或多 seed 设置下扫描不同
+`λ`，例如 `1e-5`、`1e-4`、`1e-3`。
+
+### 6.8 L2 参数扫描结果
+
+下面结果由命令生成：
+
+```bash
+uv run python src/classification_experiments.py \
+  --suite l2-sweep \
+  --dataset all \
+  --profile quick \
+  --output results/l2_sweep.json \
+  --markdown-output results/l2_sweep.md
+```
+
+| Experiment | Ablation | Epochs | LR | L2 | Batch | Initial val acc | Final val acc | Final train acc |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| iris_l2_0 | L2 regularization strength | 100 | 0.05 | 0 | 16 | 0.4667 | 0.9667 | 0.9667 |
+| iris_l2_0.0001 | L2 regularization strength | 100 | 0.05 | 0.0001 | 16 | 0.4667 | 0.9667 | 0.9667 |
+| iris_l2_0.001 | L2 regularization strength | 100 | 0.05 | 0.001 | 16 | 0.4667 | 0.9667 | 0.9667 |
+| iris_l2_0.01 | L2 regularization strength | 100 | 0.05 | 0.01 | 16 | 0.4667 | 0.9667 | 0.9583 |
+| iris_l2_0.1 | L2 regularization strength | 100 | 0.05 | 0.1 | 16 | 0.4667 | 0.9667 | 0.9500 |
+| mnist_l2_0 | L2 regularization strength | 5 | 0.1 | 0 | 128 | 0.1400 | 0.8180 | 0.8480 |
+| mnist_l2_1e-05 | L2 regularization strength | 5 | 0.1 | 1e-05 | 128 | 0.1400 | 0.8180 | 0.8480 |
+| mnist_l2_0.0001 | L2 regularization strength | 5 | 0.1 | 0.0001 | 128 | 0.1400 | 0.8180 | 0.8480 |
+| mnist_l2_0.001 | L2 regularization strength | 5 | 0.1 | 0.001 | 128 | 0.1400 | 0.8190 | 0.8470 |
+| mnist_l2_0.01 | L2 regularization strength | 5 | 0.1 | 0.01 | 128 | 0.1400 | 0.8160 | 0.8470 |
+| mnist_l2_0.1 | L2 regularization strength | 5 | 0.1 | 0.1 | 128 | 0.1400 | 0.8010 | 0.8200 |
+
+在这组 quick 实验中，iris 验证准确率对 `λ` 不敏感，主要原因是验证集只有 30 个样本，
+单个样本就对应 3.33 个百分点。MNIST 上 `λ=1e-3` 的验证准确率略高于未正则化版本，
+但差距只有 0.001，不能作为显著提升结论；`λ=0.1` 时训练准确率和验证准确率都下降，
+说明正则化过强会限制模型拟合能力。报告中可以把这组结果解释为：温和 L2 基本保持
+性能，过大的 L2 会导致欠拟合。
+
+### 6.9 学习率扫描结果
+
+结果文件：
+
+```text
+results/lr_sweep.json
+results/lr_sweep.md
+```
+
+| Experiment | LR | Final val acc | Final train acc |
+|---|---:|---:|---:|
+| iris_lr_0.001 | 0.001 | 0.7333 | 0.8250 |
+| iris_lr_0.01 | 0.01 | 0.9333 | 0.9083 |
+| iris_lr_0.05 | 0.05 | 0.9667 | 0.9667 |
+| iris_lr_0.1 | 0.1 | 0.9667 | 0.9583 |
+| mnist_lr_0.001 | 0.001 | 0.1750 | 0.1340 |
+| mnist_lr_0.01 | 0.01 | 0.4340 | 0.4520 |
+| mnist_lr_0.1 | 0.1 | 0.8180 | 0.8480 |
+| mnist_lr_0.2 | 0.2 | 0.8080 | 0.8720 |
+
+学习率过小时收敛明显变慢，尤其是 MNIST quick 中 `0.001` 和 `0.01` 都远低于
+`0.1`。`0.2` 的训练准确率更高，但验证准确率略低于 `0.1`，说明步长继续增大不一定
+带来更好的泛化表现。
+
+### 6.10 隐藏层宽度扫描结果
+
+结果文件：
+
+```text
+results/width_sweep.json
+results/width_sweep.md
+```
+
+| Experiment | Hidden units | Final val acc | Final train acc |
+|---|---:|---:|---:|
+| iris_width_4 | 4 | 0.9333 | 0.9583 |
+| iris_width_8 | 8 | 1.0000 | 0.9667 |
+| iris_width_16 | 16 | 0.9667 | 0.9667 |
+| iris_width_32 | 32 | 0.9333 | 0.9583 |
+| mnist_width_32 | 32 | 0.8330 | 0.8660 |
+| mnist_width_64 | 64 | 0.8220 | 0.8530 |
+| mnist_width_128 | 128 | 0.8180 | 0.8480 |
+| mnist_width_256 | 256 | 0.8400 | 0.8720 |
+
+IRIS 数据量很小，宽度带来的单次结果波动较明显，`8` 个隐藏单元在本次划分上达到
+1.0000 验证准确率，但不能单独说明它一定优于 `16`。MNIST quick 中 `256` 个隐藏单元
+验证准确率最高，说明更宽模型在该设置下有一定容量优势。
+
+### 6.11 训练策略对比结果
+
+结果文件：
+
+```text
+results/training_strategies.json
+results/training_strategies.md
+```
+
+| Experiment | Strategy | Final val acc | Final train acc |
+|---|---|---:|---:|
+| iris_strategy_sgd | SGD | 0.9667 | 0.9667 |
+| iris_strategy_momentum | momentum | 0.9667 | 0.9833 |
+| iris_strategy_lr_decay | LR decay | 0.9667 | 0.9583 |
+| iris_strategy_early_stopping | early stopping | 0.9667 | 0.9750 |
+| mnist_strategy_sgd | SGD | 0.8180 | 0.8480 |
+| mnist_strategy_momentum | momentum | 0.8580 | 0.9070 |
+| mnist_strategy_lr_decay | LR decay | 0.8130 | 0.8300 |
+| mnist_strategy_early_stopping | early stopping | 0.8710 | 0.9390 |
+
+MNIST quick 中，momentum 和 early stopping 设置的验证准确率高于普通 5-epoch SGD。
+这里 early stopping 的实验上限是 20 epoch，因此提升部分也来自更长训练；报告中应把它
+解释为“带验证监控的更长训练流程”，而不是只归因于提前停止机制本身。
+
+### 6.12 曲线与混淆矩阵输出
+
+报告图表由 `src/plot_results.py report-figures` 生成，当前保留在 `results/figures/`
+中的主要图包括方法进化、累积消融、损失函数、L2、学习率、隐藏层宽度、训练策略和
+最终 tuning trade-off。
+
+混淆矩阵输出已生成到：
+
+```text
+results/figures/iris_mlp_iris_val_confusion.png
+results/tables/iris_mlp_iris_val_confusion.csv
+results/figures/mnist_mlp_mnist_val_confusion.png
+results/tables/mnist_mlp_mnist_val_confusion.csv
+```
+
+当前混淆矩阵对应的 checkpoint 评估结果为：IRIS 验证集 `acc=0.9667`，MNIST quick
+验证集前 1000 张 `acc=0.8180`。这些图表适合放入报告的 Results and Analysis 部分。
+
+### 6.13 损失函数对比结果
+
+结果文件：
+
+```text
+results/loss_comparison.json
+results/loss_comparison.md
+```
+
+对比设置保持一层隐藏层 MLP 和 mini-batch SGD 不变，只改变输出层与损失函数：
+
+- `Sigmoid + MSE`：每个输出节点独立 sigmoid，使用 one-hot 标签的均方误差。
+- `Softmax + Cross-Entropy`：输出类别概率分布，使用多分类交叉熵。
+
+| Experiment | Loss setup | Final val acc | Final train acc |
+|---|---|---:|---:|
+| iris_sigmoid_mse | Sigmoid + MSE | 0.9333 | 0.9000 |
+| iris_softmax_cross_entropy | Softmax + Cross-Entropy | 0.9667 | 0.9667 |
+| mnist_sigmoid_mse | Sigmoid + MSE | 0.4230 | 0.5010 |
+| mnist_softmax_cross_entropy | Softmax + Cross-Entropy | 0.8180 | 0.8480 |
+
+结果显示，`Softmax + Cross-Entropy` 在两个数据集上都优于 `Sigmoid + MSE`，MNIST
+差距尤其明显。原因是 softmax 将多分类输出建模为一个归一化概率分布，交叉熵直接
+优化正确类别概率；而 sigmoid+MSE 更像把多分类拆成多个独立回归目标，梯度信号通常
+不如交叉熵适合分类任务。
 
 ## 7. 加载参数后的验证集评估示例
 
@@ -338,6 +600,7 @@ metrics saved to /private/tmp/mnist_loaded_val_metrics.json
       "batch_size": 128,
       "input_dim": 784,
       "output_dim": 10,
+      "l2": 0.0,
       "seed": 42,
       "mnist_limit": 1000
     }
@@ -351,7 +614,64 @@ metrics saved to /private/tmp/mnist_loaded_val_metrics.json
 `history["val_accuracy"]`，因此报告中应同时画训练曲线与验证曲线，而不是只看训练
 loss 或训练准确率。
 
-## 8. 建议报告写法
+## 8. MNIST full 最终测试结果
+
+quick profile 只用于快速比较趋势。最终模型选择后，需要重新用完整 MNIST 训练集划分
+训练，并在官方 t10k 测试集上评估一次。当前选择的 MLP 配置为：
+
+```text
+784 -> ReLU(256) -> softmax(10)
+optimizer = momentum
+learning_rate = 0.05
+momentum = 0.9
+l2 = 0
+epochs = 5
+batch_size = 128
+```
+
+训练命令：
+
+```bash
+uv run python main.py \
+  --dataset mnist \
+  --epochs 5 \
+  --hidden-dim 256 \
+  --learning-rate 0.05 \
+  --batch-size 128 \
+  --optimizer momentum \
+  --momentum 0.9 \
+  --l2 0 \
+  --model-output results/models/final_mnist_mlp.npz \
+  --output results/final_mnist_train_metrics.json \
+  --quiet
+```
+
+测试命令：
+
+```bash
+uv run python main.py \
+  --load-model results/models/final_mnist_mlp.npz \
+  --eval-split test \
+  --output results/final_mnist_test_metrics.json \
+  --quiet
+```
+
+当前结果：
+
+| Split | Accuracy | Loss | Count |
+|---|---:|---:|---:|
+| Train | 0.9885 | 0.0432 | 48000 |
+| Validation | 0.9742 | 0.0889 | 12000 |
+| Test | 0.9761 | 0.0783 | 10000 |
+
+结果文件：
+
+- [final_mnist_summary.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/final_mnist_summary.md)
+- [final_mnist_train_metrics.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/final_mnist_train_metrics.json)
+- [final_mnist_test_metrics.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/final_mnist_test_metrics.json)
+- [final_mnist_mlp.npz](/home/cdf/optimization/MNIST-IRIS-Classification/results/models/final_mnist_mlp.npz)
+
+## 9. 建议报告写法
 
 报告中可以把当前模型描述为：
 

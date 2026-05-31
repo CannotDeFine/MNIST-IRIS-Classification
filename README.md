@@ -43,19 +43,96 @@ uv run python main.py --dataset iris
 # 只查看训练前基线准确率（epoch 000）
 uv run python main.py --dataset all --mnist-limit 1000 --epochs 0
 
+# 使用 L2 正则化训练，并将结果单独保存
+uv run python main.py --dataset all --l2 0.001 \
+  --output results/classification_nn_l2_metrics.json
+
+# 扫描多组 L2 正则化系数，输出 JSON 与 Markdown 表格
+uv run python src/classification_experiments.py \
+  --suite l2-sweep \
+  --dataset all \
+  --profile quick \
+  --output results/l2_sweep.json \
+  --markdown-output results/l2_sweep.md
+
+# 学习率、隐藏层宽度和训练策略扫描
+uv run python src/classification_experiments.py --suite lr-sweep \
+  --dataset all --profile quick --output results/lr_sweep.json \
+  --markdown-output results/lr_sweep.md
+uv run python src/classification_experiments.py --suite width-sweep \
+  --dataset all --profile quick --output results/width_sweep.json \
+  --markdown-output results/width_sweep.md
+uv run python src/classification_experiments.py --suite training-strategies \
+  --dataset all --profile quick --output results/training_strategies.json \
+  --markdown-output results/training_strategies.md
+uv run python src/classification_experiments.py --suite loss-comparison \
+  --dataset all --profile quick --output results/loss_comparison.json \
+  --markdown-output results/loss_comparison.md
+
+# 从训练 JSON 画 loss / accuracy 曲线
+uv run python src/plot_results.py curves \
+  --metrics results/classification_nn_metrics.json \
+  --output-dir results/figures
+
 # 训练并保存参数、预处理信息
 uv run python main.py --dataset mnist --mnist-limit 1000 --epochs 1 \
   --model-output results/models/mnist_mlp.npz
 
 # 重新加载参数，在验证集上独立评估
 uv run python main.py --load-model results/models/mnist_mlp.npz --eval-split val
+
+# 训练当前选择的 MNIST full 模型，并保存 checkpoint
+uv run python main.py \
+  --dataset mnist \
+  --epochs 5 \
+  --hidden-dim 256 \
+  --learning-rate 0.05 \
+  --batch-size 128 \
+  --optimizer momentum \
+  --momentum 0.9 \
+  --l2 0 \
+  --model-output results/models/final_mnist_mlp.npz \
+  --output results/final_mnist_train_metrics.json \
+  --quiet
+
+# 加载 checkpoint，在 MNIST 官方 t10k 测试集上做最终评估
+uv run python main.py \
+  --load-model results/models/final_mnist_mlp.npz \
+  --eval-split test \
+  --output results/final_mnist_test_metrics.json \
+  --quiet
+
+# 用保存的模型生成混淆矩阵图片和 CSV 表格
+uv run python src/plot_results.py confusion \
+  --model results/models/mnist_mlp.npz \
+  --split val \
+  --mnist-limit 1000
+
+# MNIST CNN 扩展示例
+uv run python src/cnn_mnist.py \
+  --train-limit 1000 \
+  --val-limit 1000 \
+  --epochs 3 \
+  --batch-size 32 \
+  --filters 8 \
+  --learning-rate 0.05 \
+  --output results/cnn_mnist_metrics.json \
+  --quiet
 ```
 
 当前模型位于 `src/classification_nn.py`，使用 NumPy 实现两层 MLP
 （输入层 -> ReLU 隐藏层 -> softmax 输出层），并复用 `src/data_split.py`
-中的 iris / MNIST 训练集和验证集划分。训练日志从 `epoch 000` 开始，
+中的 iris / MNIST 训练集和验证集划分；MNIST 官方 t10k 测试集只用于最终测试。
+训练日志从 `epoch 000` 开始，
 表示参数初始化后、尚未做梯度更新时的基线准确率。
+可通过 `--l2` 为 MLP 权重加入 L2 正则化惩罚项，用于比较未正则化目标和
+正则化目标的训练/验证表现。实验入口还支持学习率扫描、隐藏层宽度扫描、
+momentum、学习率衰减、early stopping 和损失函数对比。
 模型优化与消融实验说明见 `docs/classification_nn_experiments.md`。
+从 baseline 到优化模型的演进路线见 `docs/experiment_roadmap.md`。
+MNIST CNN 扩展说明见 `docs/cnn_extension.md`。
+当前选定 MNIST full MLP 结果见 `results/final_mnist_summary.md`：验证集准确率
+`0.9742`，官方测试集准确率 `0.9761`。
 
 新增依赖（会同时更新 `pyproject.toml` 和 `uv.lock`，记得提交这两个文件）：
 

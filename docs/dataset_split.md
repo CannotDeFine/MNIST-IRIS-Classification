@@ -86,7 +86,7 @@ uv run python src/data_split.py
 ```python
 import sys
 sys.path.append("src")
-from data_split import load_iris_split, load_mnist_split
+from data_split import load_iris_split, load_mnist_split, load_mnist_test
 
 # iris：返回 (特征矩阵 X, 标签 y)
 X_train, y_train = load_iris_split("train")   # X_train 形状 (120, 4)
@@ -95,6 +95,9 @@ X_val,   y_val   = load_iris_split("val")     # X_val   形状 (30, 4)
 # MNIST：返回 (图像, 标签)，图像形状 (N, 28, 28)
 img_train, lab_train = load_mnist_split("train")   # 48000 张
 img_val,   lab_val   = load_mnist_split("val")     # 12000 张
+
+# MNIST 官方 t10k 测试集：只用于最终测试，不参与训练和调参
+img_test, lab_test = load_mnist_test()              # 10000 张
 ```
 
 ## 7. 注意事项

@@ -159,6 +159,13 @@ def load_mnist_split(which="train"):
     return images[idx], labels[idx]
 
 
+def load_mnist_test():
+    """加载 MNIST 官方 t10k 测试集，返回 (images, labels)。"""
+    images = read_idx_images(MNIST_DIR / "t10k-images-idx3-ubyte.gz")
+    labels = read_idx_labels(MNIST_DIR / "t10k-labels-idx1-ubyte.gz")
+    return images, labels
+
+
 # ---------------------------- 主流程 ----------------------------
 def main():
     SPLITS_DIR.mkdir(exist_ok=True)

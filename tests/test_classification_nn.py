@@ -82,7 +82,44 @@ class MLPClassifierTests(unittest.TestCase):
         )
 
         self.assertEqual(metrics["config"]["epochs"], 0)
+        self.assertEqual(metrics["epochs_trained"], 0)
+        self.assertFalse(metrics["stopped_early"])
         self.assertEqual(len(metrics["history"]["accuracy"]), 1)
+
+    def test_train_dataset_records_l2_regularization_strength(self) -> None:
+        metrics = train_dataset(
+            "iris",
+            epochs=1,
+            hidden_dim=4,
+            learning_rate=0.01,
+            batch_size=16,
+            l2=0.001,
+            verbose=False,
+        )
+
+        self.assertEqual(metrics["config"]["l2"], 0.001)
+
+    def test_train_dataset_records_training_strategy_options(self) -> None:
+        metrics = train_dataset(
+            "iris",
+            epochs=2,
+            hidden_dim=4,
+            learning_rate=0.02,
+            batch_size=16,
+            optimizer="momentum",
+            momentum=0.8,
+            lr_decay=0.1,
+            early_stopping_patience=2,
+            verbose=False,
+        )
+
+        self.assertEqual(metrics["config"]["optimizer"], "momentum")
+        self.assertEqual(metrics["config"]["momentum"], 0.8)
+        self.assertEqual(metrics["config"]["lr_decay"], 0.1)
+        self.assertEqual(metrics["config"]["early_stopping_patience"], 2)
+        self.assertIn("learning_rate", metrics["history"])
+        self.assertEqual(metrics["epochs_trained"], len(metrics["history"]["loss"]) - 1)
+        self.assertIn("stopped_early", metrics)
 
     def test_saved_checkpoint_loads_and_matches_validation_metrics(self) -> None:
         metrics = train_dataset(
@@ -140,6 +177,14 @@ class DataPreparationTests(unittest.TestCase):
         self.assertGreaterEqual(float(X.min()), 0.0)
         self.assertLessEqual(float(X.max()), 1.0)
         self.assertTrue(np.issubdtype(y.dtype, np.integer))
+
+    def test_prepare_mnist_test_split_loads_official_t10k_samples(self) -> None:
+        X, y, _ = prepare_mnist_split("test", limit=64)
+
+        self.assertEqual(X.shape, (64, 784))
+        self.assertEqual(y.shape, (64,))
+        self.assertGreaterEqual(float(X.min()), 0.0)
+        self.assertLessEqual(float(X.max()), 1.0)
 
 
 if __name__ == "__main__":

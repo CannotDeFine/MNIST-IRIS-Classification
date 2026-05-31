@@ -14,9 +14,9 @@ from typing import Any
 import numpy as np
 
 try:  # Support both `python src/classification_nn.py` and package imports.
-    from .data_split import load_iris_split, load_mnist_split
+    from .data_split import load_iris_split, load_mnist_split, load_mnist_test
 except ImportError:  # pragma: no cover - exercised by direct script execution.
-    from data_split import load_iris_split, load_mnist_split
+    from data_split import load_iris_split, load_mnist_split, load_mnist_test
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -42,6 +42,10 @@ class MLPClassifier:
         output_dim: int,
         learning_rate: float = 0.05,
         l2: float = 0.0,
+        optimizer: str = "sgd",
+        momentum: float = 0.9,
+        lr_decay: float = 0.0,
+        early_stopping_patience: int | None = None,
         seed: int = 42,
     ) -> None:
         self.input_dim = input_dim
@@ -49,12 +53,22 @@ class MLPClassifier:
         self.output_dim = output_dim
         self.learning_rate = learning_rate
         self.l2 = l2
+        self.optimizer = optimizer
+        self.momentum = momentum
+        self.lr_decay = lr_decay
+        self.early_stopping_patience = early_stopping_patience
         self.rng = np.random.default_rng(seed)
 
         self.W1 = self.rng.normal(0.0, np.sqrt(2.0 / input_dim), (input_dim, hidden_dim))
         self.b1 = np.zeros(hidden_dim, dtype=np.float64)
         self.W2 = self.rng.normal(0.0, np.sqrt(2.0 / hidden_dim), (hidden_dim, output_dim))
         self.b2 = np.zeros(output_dim, dtype=np.float64)
+        self._velocity = {
+            "W1": np.zeros_like(self.W1),
+            "b1": np.zeros_like(self.b1),
+            "W2": np.zeros_like(self.W2),
+            "b2": np.zeros_like(self.b2),
+        }
 
     def _forward(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         z1 = X @ self.W1 + self.b1
@@ -85,7 +99,7 @@ class MLPClassifier:
     def accuracy(self, X: np.ndarray, y: np.ndarray) -> float:
         return float(np.mean(self.predict(X) == y))
 
-    def _train_batch(self, X: np.ndarray, y: np.ndarray) -> None:
+    def _train_batch(self, X: np.ndarray, y: np.ndarray, learning_rate: float) -> None:
         n = X.shape[0]
         z1, hidden, logits = self._forward(X)
         probs = self._softmax(logits)
@@ -99,10 +113,21 @@ class MLPClassifier:
         dW1 = X.T @ dz1 + self.l2 * self.W1
         db1 = dz1.sum(axis=0)
 
-        self.W1 -= self.learning_rate * dW1
-        self.b1 -= self.learning_rate * db1
-        self.W2 -= self.learning_rate * dW2
-        self.b2 -= self.learning_rate * db2
+        gradients = {"W1": dW1, "b1": db1, "W2": dW2, "b2": db2}
+        if self.optimizer == "sgd":
+            self.W1 -= learning_rate * dW1
+            self.b1 -= learning_rate * db1
+            self.W2 -= learning_rate * dW2
+            self.b2 -= learning_rate * db2
+        elif self.optimizer == "momentum":
+            for name, gradient in gradients.items():
+                self._velocity[name] = self.momentum * self._velocity[name] + gradient
+            self.W1 -= learning_rate * self._velocity["W1"]
+            self.b1 -= learning_rate * self._velocity["b1"]
+            self.W2 -= learning_rate * self._velocity["W2"]
+            self.b2 -= learning_rate * self._velocity["b2"]
+        else:
+            raise ValueError("optimizer must be 'sgd' or 'momentum'")
 
     def fit(
         self,
@@ -115,14 +140,15 @@ class MLPClassifier:
     ) -> dict[str, list[float]]:
         X = np.asarray(X, dtype=np.float64)
         y = np.asarray(y, dtype=np.int64)
-        history: dict[str, list[float]] = {"loss": [], "accuracy": []}
+        history: dict[str, list[float]] = {"loss": [], "accuracy": [], "learning_rate": []}
         if val_data is not None:
             history["val_loss"] = []
             history["val_accuracy"] = []
 
-        def record_metrics() -> None:
+        def record_metrics(current_lr: float) -> None:
             history["loss"].append(self.loss(X, y))
             history["accuracy"].append(self.accuracy(X, y))
+            history["learning_rate"].append(current_lr)
             if val_data is not None:
                 X_val, y_val = val_data
                 history["val_loss"].append(self.loss(X_val, y_val))
@@ -141,19 +167,31 @@ class MLPClassifier:
                 )
             print(message)
 
-        record_metrics()
+        record_metrics(current_lr=self.learning_rate)
         if verbose:
             print_latest_metrics(epoch=0)
 
+        best_val_loss = float("inf")
+        epochs_without_improvement = 0
         for epoch in range(1, epochs + 1):
+            current_lr = self.learning_rate / (1.0 + self.lr_decay * (epoch - 1))
             order = self.rng.permutation(X.shape[0])
             for start in range(0, X.shape[0], batch_size):
                 idx = order[start : start + batch_size]
-                self._train_batch(X[idx], y[idx])
+                self._train_batch(X[idx], y[idx], learning_rate=current_lr)
 
-            record_metrics()
+            record_metrics(current_lr=current_lr)
             if verbose:
                 print_latest_metrics(epoch=epoch)
+            if val_data is not None and self.early_stopping_patience is not None:
+                val_loss = history["val_loss"][-1]
+                if val_loss < best_val_loss - 1e-12:
+                    best_val_loss = val_loss
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+                if epochs_without_improvement >= self.early_stopping_patience:
+                    break
 
         return history
 
@@ -201,7 +239,10 @@ def prepare_mnist_split(
     meta: SplitMeta | None = None,
 ) -> tuple[np.ndarray, np.ndarray, SplitMeta]:
     """Load an MNIST split, flatten images, scale pixels, and encode labels."""
-    images, labels = load_mnist_split(which)
+    if which == "test":
+        images, labels = load_mnist_test()
+    else:
+        images, labels = load_mnist_split(which)
     if limit is not None:
         images = images[:limit]
         labels = labels[:limit]
@@ -220,6 +261,11 @@ def train_dataset(
     hidden_dim: int | None = None,
     learning_rate: float | None = None,
     batch_size: int | None = None,
+    l2: float = 0.0,
+    optimizer: str = "sgd",
+    momentum: float = 0.9,
+    lr_decay: float = 0.0,
+    early_stopping_patience: int | None = None,
     seed: int = 42,
     mnist_limit: int | None = None,
     verbose: bool = True,
@@ -236,6 +282,11 @@ def train_dataset(
             "batch_size": 16 if batch_size is None else batch_size,
             "input_dim": 4,
             "output_dim": 3,
+            "l2": l2,
+            "optimizer": optimizer,
+            "momentum": momentum,
+            "lr_decay": lr_decay,
+            "early_stopping_patience": early_stopping_patience,
         }
     elif dataset == "mnist":
         X_train, y_train, meta = prepare_mnist_split("train", limit=mnist_limit)
@@ -248,6 +299,11 @@ def train_dataset(
             "batch_size": 128 if batch_size is None else batch_size,
             "input_dim": 784,
             "output_dim": 10,
+            "l2": l2,
+            "optimizer": optimizer,
+            "momentum": momentum,
+            "lr_decay": lr_decay,
+            "early_stopping_patience": early_stopping_patience,
         }
     else:
         raise ValueError("dataset must be 'iris' or 'mnist'")
@@ -257,6 +313,11 @@ def train_dataset(
         hidden_dim=config["hidden_dim"],
         output_dim=config["output_dim"],
         learning_rate=config["learning_rate"],
+        l2=config["l2"],
+        optimizer=config["optimizer"],
+        momentum=config["momentum"],
+        lr_decay=config["lr_decay"],
+        early_stopping_patience=config["early_stopping_patience"],
         seed=seed,
     )
     history = model.fit(
@@ -267,9 +328,12 @@ def train_dataset(
         val_data=(X_val, y_val),
         verbose=verbose,
     )
+    epochs_trained = len(history["loss"]) - 1
     metrics: dict[str, Any] = {
         "dataset": dataset,
         "config": config | {"seed": seed, "mnist_limit": mnist_limit},
+        "epochs_trained": epochs_trained,
+        "stopped_early": epochs_trained < config["epochs"],
         "final_train_accuracy": history["accuracy"][-1],
         "final_val_accuracy": history["val_accuracy"][-1],
         "final_train_loss": history["loss"][-1],
@@ -318,6 +382,11 @@ def load_checkpoint(path: Path) -> tuple[MLPClassifier, str, SplitMeta, dict[str
             hidden_dim=int(config["hidden_dim"]),
             output_dim=int(config["output_dim"]),
             learning_rate=float(config["learning_rate"]),
+            l2=float(config.get("l2", 0.0)),
+            optimizer=str(config.get("optimizer", "sgd")),
+            momentum=float(config.get("momentum", 0.9)),
+            lr_decay=float(config.get("lr_decay", 0.0)),
+            early_stopping_patience=config.get("early_stopping_patience"),
             seed=int(config.get("seed", 42)),
         )
         model.W1 = data["W1"].copy()
@@ -333,9 +402,11 @@ def evaluate_checkpoint(
     split: str = "val",
     mnist_limit: int | None = None,
 ) -> dict[str, Any]:
-    """Load a saved model and evaluate it on a train or validation split."""
+    """Load a saved model and evaluate it on a train, validation, or test split."""
     model, dataset, meta, config = load_checkpoint(path)
     if dataset == "iris":
+        if split == "test":
+            raise ValueError("iris has no separate official test split; use train or val")
         X, y, _ = prepare_iris_split(split, meta=meta)
     elif dataset == "mnist":
         limit = mnist_limit if mnist_limit is not None else config.get("mnist_limit")
@@ -367,6 +438,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--hidden-dim", type=int, default=None)
     parser.add_argument("--learning-rate", type=float, default=None)
     parser.add_argument("--batch-size", type=int, default=None)
+    parser.add_argument(
+        "--l2",
+        type=float,
+        default=0.0,
+        help="L2 regularization strength for MLP weights.",
+    )
+    parser.add_argument("--optimizer", choices=["sgd", "momentum"], default="sgd")
+    parser.add_argument("--momentum", type=float, default=0.9)
+    parser.add_argument("--lr-decay", type=float, default=0.0)
+    parser.add_argument("--early-stopping-patience", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--mnist-limit",
@@ -400,7 +481,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--eval-split",
-        choices=["train", "val"],
+        choices=["train", "val", "test"],
         default="val",
         help="Dataset split used with --load-model.",
     )
@@ -441,6 +522,11 @@ def main(argv: list[str] | None = None) -> None:
             hidden_dim=args.hidden_dim,
             learning_rate=args.learning_rate,
             batch_size=args.batch_size,
+            l2=args.l2,
+            optimizer=args.optimizer,
+            momentum=args.momentum,
+            lr_decay=args.lr_decay,
+            early_stopping_patience=args.early_stopping_patience,
             seed=args.seed,
             mnist_limit=args.mnist_limit,
             verbose=not args.quiet,
