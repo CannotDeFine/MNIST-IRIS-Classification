@@ -110,6 +110,16 @@ class ExperimentRunnerTests(unittest.TestCase):
         self.assertIn("mnist_strategy_momentum", names)
         self.assertTrue(any(config.optimizer == "momentum" for config in configs))
 
+    def test_build_training_strategy_full_uses_100_epochs(self) -> None:
+        configs = build_training_strategy_configs("mnist", profile="full")
+        fixed_epoch_configs = [
+            config
+            for config in configs
+            if config.name in {"mnist_strategy_sgd", "mnist_strategy_momentum", "mnist_strategy_lr_decay"}
+        ]
+
+        self.assertEqual([config.epochs for config in fixed_epoch_configs], [100, 100, 100])
+
     def test_build_loss_comparison_configs_includes_both_losses(self) -> None:
         configs = build_loss_comparison_configs("iris", profile="quick")
         names = [config.name for config in configs]

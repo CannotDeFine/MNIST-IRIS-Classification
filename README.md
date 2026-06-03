@@ -47,32 +47,27 @@ uv run python main.py --dataset all --mnist-limit 1000 --epochs 0
 uv run python main.py --dataset all --l2 0.001 \
   --output results/classification_nn_l2_metrics.json
 
-# 扫描多组 L2 正则化系数，输出 JSON 与 Markdown 表格
+# 扫描多组 L2 正则化系数，输出 JSON
 uv run python src/classification_experiments.py \
   --suite l2-sweep \
   --dataset all \
   --profile quick \
-  --output results/l2_sweep.json \
-  --markdown-output results/l2_sweep.md
+  --output results/l2_sweep.json
 
 # 学习率、隐藏层宽度和训练策略扫描
 uv run python src/classification_experiments.py --suite lr-sweep \
-  --dataset all --profile quick --output results/lr_sweep.json \
-  --markdown-output results/lr_sweep.md
+  --dataset all --profile quick --output results/lr_sweep.json
 uv run python src/classification_experiments.py --suite width-sweep \
-  --dataset all --profile quick --output results/width_sweep.json \
-  --markdown-output results/width_sweep.md
+  --dataset all --profile quick --output results/width_sweep.json
 uv run python src/classification_experiments.py --suite training-strategies \
-  --dataset all --profile quick --output results/training_strategies.json \
-  --markdown-output results/training_strategies.md
+  --dataset all --profile quick --output results/training_strategies.json
 uv run python src/classification_experiments.py --suite loss-comparison \
-  --dataset all --profile quick --output results/loss_comparison.json \
-  --markdown-output results/loss_comparison.md
+  --dataset all --profile quick --output results/loss_comparison.json
 
 # 从训练 JSON 画 loss / accuracy 曲线
 uv run python src/plot_results.py curves \
   --metrics results/classification_nn_metrics.json \
-  --output-dir results/figures
+  --output-dir results/learning_curves
 
 # 训练并保存参数、预处理信息
 uv run python main.py --dataset mnist --mnist-limit 1000 --epochs 1 \
@@ -102,7 +97,7 @@ uv run python main.py \
   --output results/final_mnist_test_metrics.json \
   --quiet
 
-# 用保存的模型生成混淆矩阵图片和 CSV 表格
+# 用保存的模型生成混淆矩阵 PDF 和 CSV 表格
 uv run python src/plot_results.py confusion \
   --model results/models/mnist_mlp.npz \
   --split val \
@@ -130,6 +125,7 @@ uv run python src/cnn_mnist.py \
 momentum、学习率衰减、early stopping 和损失函数对比。
 模型优化与消融实验说明见 `docs/classification_nn_experiments.md`。
 从 baseline 到优化模型的演进路线见 `docs/experiment_roadmap.md`。
+按 roadmap 分组的版本化实验入口位于 `versions/`，每个 version 有独立目录和 `run.py`。
 MNIST CNN 扩展说明见 `docs/cnn_extension.md`。
 当前选定 MNIST full MLP 结果见 `results/final_mnist_summary.md`：验证集准确率
 `0.9742`，官方测试集准确率 `0.9761`。
@@ -149,11 +145,23 @@ Project_3_2026/
 ├── .python-version     # 固定 Python 版本 3.12
 ├── main.py             # 入口示例
 ├── src/                # 算法实现与共享代码
+├── versions/           # 按 roadmap 拆分的 V0/V1/V2/V3/V4/Final 实验入口
 ├── notebooks/          # Jupyter 实验记录
 ├── results/            # 图表与实验输出（默认不纳入版本控制）
 ├── iris/               # iris 数据集
 ├── mnist/              # MNIST 数据集（idx 格式 .gz）
 └── Porject3_Assignment_2026.pptx  # 课程作业要求
+```
+
+按版本运行示例：
+
+```bash
+uv run python versions/v0_untrained_random/run.py --dataset all --profile quick
+uv run python versions/v1_linear_softmax/run.py --dataset all --profile quick
+uv run python versions/v2_small_mlp/run.py --dataset all --profile quick
+uv run python versions/v3_stable_mlp/run.py --dataset all --profile quick
+uv run python versions/v4_component_checks/run.py --dataset all --profile quick
+uv run python versions/final_selected_model/run.py --mnist-limit 1000 --epochs 5 --skip-test
 ```
 
 ## Git 协作流程
