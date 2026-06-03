@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from plot_results import plot_metric_comparison  # noqa: E402
+from plot_results import plot_metric_comparison, plot_validation_curves  # noqa: E402
 
 
 class PlotResultsTests(unittest.TestCase):
@@ -52,6 +52,44 @@ class PlotResultsTests(unittest.TestCase):
             self.assertEqual(len(outputs), 3)
             for path in outputs:
                 self.assertTrue(path.exists())
+            self.assertTrue((tmp / "comparison_val_accuracy.pdf").exists())
+            self.assertTrue((tmp / "comparison_epochs_trained.pdf").exists())
+
+    def test_plot_validation_curves_writes_accuracy_and_loss_pdfs(self) -> None:
+        payload = [
+            {
+                "name": "mnist_strategy_sgd",
+                "dataset": "mnist",
+                "history": {
+                    "val_accuracy": [0.1, 0.4, 0.7],
+                    "val_loss": [1.0, 0.7, 0.4],
+                },
+            },
+            {
+                "name": "mnist_strategy_momentum",
+                "dataset": "mnist",
+                "history": {
+                    "val_accuracy": [0.1, 0.5, 0.8],
+                    "val_loss": [1.0, 0.6, 0.3],
+                },
+            },
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            metrics_path = tmp / "strategies.json"
+            metrics_path.write_text(json.dumps(payload), encoding="utf-8")
+
+            outputs = plot_validation_curves(
+                metrics_path=metrics_path,
+                output_dir=tmp,
+                output_prefix="strategies",
+                dataset="mnist",
+            )
+
+            self.assertEqual(len(outputs), 2)
+            self.assertTrue((tmp / "strategies_val_accuracy.pdf").exists())
+            self.assertTrue((tmp / "strategies_val_loss.pdf").exists())
 
 
 if __name__ == "__main__":

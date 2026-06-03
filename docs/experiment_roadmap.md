@@ -5,23 +5,26 @@
 再逐步加入组件，最后统一调参”的原则。详细实现位于
 [src/classification_nn.py](/home/cdf/optimization/MNIST-IRIS-Classification/src/classification_nn.py:1)
 和 [src/classification_experiments.py](/home/cdf/optimization/MNIST-IRIS-Classification/src/classification_experiments.py:1)。
+为了让报告路线更清楚，按版本组织的运行入口放在
+[versions/](/home/cdf/optimization/MNIST-IRIS-Classification/versions:1)，每个 version
+都有独立目录和 `run.py`。
 
 ## 结果文件索引
 
 | 内容 | 文件 |
 |---|---|
-| 标准消融与基础版本对比 | [classification_ablation_l2.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.md) |
-| baseline 进化路线重跑结果 | [baseline_progression.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/baseline_progression.md) |
-| baseline 进化路线 full 结果 | [baseline_progression_full.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/baseline_progression_full.md) |
+| 标准消融与基础版本对比 | [classification_ablation_l2.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.json) |
+| baseline 进化路线重跑结果 | [baseline_progression.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/baseline_progression.json) |
+| baseline 进化路线 full 结果 | [baseline_progression_full.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/baseline_progression_full.json) |
 | 当前主模型完整训练结果 | [classification_nn_metrics.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_nn_metrics.json) |
-| L2 参数扫描 | [l2_sweep.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/l2_sweep.md) |
-| 学习率扫描 | [lr_sweep.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/lr_sweep.md) |
-| 隐藏层宽度扫描 | [width_sweep.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/width_sweep.md) |
-| 训练策略对比 | [training_strategies.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/training_strategies.md) |
-| 损失函数对比 | [loss_comparison.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/loss_comparison.md) |
-| IRIS 混淆矩阵图片 | [iris_mlp_iris_val_confusion.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/iris_mlp_iris_val_confusion.png) |
+| L2 参数扫描 | [l2_sweep.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/l2_sweep.json) |
+| 学习率扫描 | [lr_sweep.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/lr_sweep.json) |
+| 隐藏层宽度扫描 | [width_sweep.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/width_sweep.json) |
+| 训练策略对比 | [training_strategies.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/training_strategies.json) |
+| 损失函数对比 | [loss_comparison.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/loss_comparison.json) |
+| IRIS 混淆矩阵 PDF | [iris_mlp_iris_val_confusion.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/confusion_matrices/iris_mlp_iris_val_confusion.pdf) |
 | IRIS 混淆矩阵表格 | [iris_mlp_iris_val_confusion.csv](/home/cdf/optimization/MNIST-IRIS-Classification/results/tables/iris_mlp_iris_val_confusion.csv) |
-| MNIST quick 混淆矩阵图片 | [mnist_mlp_mnist_val_confusion.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/mnist_mlp_mnist_val_confusion.png) |
+| MNIST quick 混淆矩阵 PDF | [mnist_mlp_mnist_val_confusion.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/confusion_matrices/mnist_mlp_mnist_val_confusion.pdf) |
 | MNIST quick 混淆矩阵表格 | [mnist_mlp_mnist_val_confusion.csv](/home/cdf/optimization/MNIST-IRIS-Classification/results/tables/mnist_mlp_mnist_val_confusion.csv) |
 | MNIST CNN 扩展 | [cnn_extension.md](/home/cdf/optimization/MNIST-IRIS-Classification/docs/cnn_extension.md) |
 | MNIST CNN quick 结果 | [cnn_mnist_metrics.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/cnn_mnist_metrics.json) |
@@ -32,14 +35,14 @@
 | MNIST 最终 checkpoint | [final_mnist_mlp.npz](/home/cdf/optimization/MNIST-IRIS-Classification/results/models/final_mnist_mlp.npz) |
 | MNIST early-stopping 最终模型汇总 | [final_mnist_es100_summary.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/final_mnist_es100_summary.md) |
 | MNIST early-stopping 官方测试指标 | [final_mnist_es100_test_metrics.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/final_mnist_es100_test_metrics.json) |
-| 报告图：MNIST 方法进化 | [report_mnist_method_progression.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_method_progression.png) |
-| 报告图：MNIST 累积消融 | [report_mnist_cumulative_ablation.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_cumulative_ablation.png) |
-| 报告图：MNIST 损失函数检查 | [report_mnist_loss_function_check.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_loss_function_check.png) |
-| 报告图：MNIST L2 扫描 | [report_mnist_l2_sweep.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_l2_sweep.png) |
-| 报告图：MNIST 学习率扫描 | [report_mnist_learning_rate_sweep.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_learning_rate_sweep.png) |
-| 报告图：MNIST 隐藏层宽度扫描 | [report_mnist_hidden_width_sweep.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_hidden_width_sweep.png) |
-| 报告图：MNIST 训练策略 | [report_mnist_training_strategies.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_training_strategies.png) |
-| 报告图：MNIST 最终权衡 | [report_mnist_final_tradeoff.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_final_tradeoff.png) |
+| 报告图：MNIST 方法进化 | [report_mnist_method_progression.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_method_progression.pdf) |
+| 报告图：MNIST 累积消融 | [report_mnist_cumulative_ablation.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_cumulative_ablation.pdf) |
+| 报告图：MNIST 损失函数检查 | [report_mnist_loss_function_check.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_loss_function_check.pdf) |
+| 报告图：MNIST L2 扫描 | [report_mnist_l2_sweep.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_l2_sweep.pdf) |
+| 报告图：MNIST 学习率扫描 | [report_mnist_learning_rate_sweep.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_learning_rate_sweep.pdf) |
+| 报告图：MNIST 隐藏层宽度扫描 | [report_mnist_hidden_width_sweep.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_hidden_width_sweep.pdf) |
+| 报告图：MNIST 训练策略 | [report_mnist_training_strategies.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_training_strategies.pdf) |
+| 报告图：MNIST 最终权衡 | [report_mnist_final_tradeoff.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_final_tradeoff.pdf) |
 
 注意：`results/` 目录默认被 `.gitignore` 忽略。上表链接指向本地已生成结果；如果换机器，
 需要按 README 或本文档命令重新生成。
@@ -68,6 +71,30 @@ quick 实验用于快速观察趋势；full 实验用于正式选择模型；tes
 gradient descent，它在 MNIST 上会比较强。后续版本的意义是说明我们如何在强基线之上
 逐步增加表达能力、训练稳定性和收敛效率，而不是只和随机猜测比较。
 
+## Version Code Layout
+
+`src/` 仍然是共享核心实现，避免复制神经网络、数据读取和指标计算代码；`versions/`
+是面向报告的组织层，每个目录只负责运行 roadmap 中对应的一组实验。这样既能按版本
+展示演进路线，也能保持核心实现可测试、可维护。
+
+| Version | 目录 | 运行命令 | 默认输出 |
+|---|---|---|---|
+| V0 | [versions/v0_untrained_random](/home/cdf/optimization/MNIST-IRIS-Classification/versions/v0_untrained_random:1) | `uv run python versions/v0_untrained_random/run.py --dataset all --profile quick` | `results/versions/v0_untrained_random/` |
+| V1 | [versions/v1_linear_softmax](/home/cdf/optimization/MNIST-IRIS-Classification/versions/v1_linear_softmax:1) | `uv run python versions/v1_linear_softmax/run.py --dataset all --profile quick` | `results/versions/v1_linear_softmax/` |
+| V2 | [versions/v2_small_mlp](/home/cdf/optimization/MNIST-IRIS-Classification/versions/v2_small_mlp:1) | `uv run python versions/v2_small_mlp/run.py --dataset all --profile quick` | `results/versions/v2_small_mlp/` |
+| V3 | [versions/v3_stable_mlp](/home/cdf/optimization/MNIST-IRIS-Classification/versions/v3_stable_mlp:1) | `uv run python versions/v3_stable_mlp/run.py --dataset all --profile quick` | `results/versions/v3_stable_mlp/` |
+| V4 | [versions/v4_component_checks](/home/cdf/optimization/MNIST-IRIS-Classification/versions/v4_component_checks:1) | `uv run python versions/v4_component_checks/run.py --dataset all --profile quick` | `results/versions/v4_component_checks/` |
+| Final | [versions/final_selected_model](/home/cdf/optimization/MNIST-IRIS-Classification/versions/final_selected_model:1) | `uv run python versions/final_selected_model/run.py` | `results/versions/final_selected_model/` |
+
+如果只想快速检查最终模型脚本，不跑完整 MNIST，可以使用：
+
+```bash
+uv run python versions/final_selected_model/run.py \
+  --mnist-limit 1000 \
+  --epochs 5 \
+  --skip-test
+```
+
 ## Reproduce All Experiments
 
 按下面顺序可以重新生成本文档引用的核心结果。quick 实验用于探索趋势，最终测试只在
@@ -75,49 +102,54 @@ gradient descent，它在 MNIST 上会比较强。后续版本的意义是说明
 random seed 和 5 epoch 训练预算。更严格的正式实验可以把 `--epochs` 作为最大 epoch，
 并统一加入 `--early-stopping-patience`，根据 validation loss 停止训练。
 
+按 version 目录运行时，可以使用：
+
+```bash
+uv run python versions/v0_untrained_random/run.py --dataset all --profile quick
+uv run python versions/v1_linear_softmax/run.py --dataset all --profile quick
+uv run python versions/v2_small_mlp/run.py --dataset all --profile quick
+uv run python versions/v3_stable_mlp/run.py --dataset all --profile quick
+uv run python versions/v4_component_checks/run.py --dataset all --profile quick
+uv run python versions/final_selected_model/run.py
+```
+
+下面保留原始统一脚本命令，便于一次性重现旧结果路径。
+
 ```bash
 uv run python src/classification_experiments.py \
   --dataset all \
   --profile quick \
-  --output results/classification_ablation_l2.json \
-  --markdown-output results/classification_ablation_l2.md
+  --output results/classification_ablation_l2.json
 
 uv run python src/classification_experiments.py \
   --dataset all \
   --profile quick \
-  --output results/baseline_progression.json \
-  --markdown-output results/baseline_progression.md
+  --output results/baseline_progression.json
 
 uv run python src/classification_experiments.py \
   --dataset all \
   --profile full \
-  --output results/baseline_progression_full.json \
-  --markdown-output results/baseline_progression_full.md
+  --output results/baseline_progression_full.json
 
 uv run python src/classification_experiments.py --suite loss-comparison \
   --dataset all --profile quick \
-  --output results/loss_comparison.json \
-  --markdown-output results/loss_comparison.md
+  --output results/loss_comparison.json
 
 uv run python src/classification_experiments.py --suite l2-sweep \
   --dataset all --profile quick \
-  --output results/l2_sweep.json \
-  --markdown-output results/l2_sweep.md
+  --output results/l2_sweep.json
 
 uv run python src/classification_experiments.py --suite lr-sweep \
   --dataset all --profile quick \
-  --output results/lr_sweep.json \
-  --markdown-output results/lr_sweep.md
+  --output results/lr_sweep.json
 
 uv run python src/classification_experiments.py --suite width-sweep \
   --dataset all --profile quick \
-  --output results/width_sweep.json \
-  --markdown-output results/width_sweep.md
+  --output results/width_sweep.json
 
 uv run python src/classification_experiments.py --suite training-strategies \
   --dataset all --profile quick \
-  --output results/training_strategies.json \
-  --markdown-output results/training_strategies.md
+  --output results/training_strategies.json
 
 uv run python src/cnn_mnist.py \
   --train-limit 1000 \
@@ -174,7 +206,7 @@ uv run python main.py \
 uv run python src/plot_results.py confusion \
   --model results/models/iris_mlp.npz \
   --split val \
-  --figure-dir results/figures \
+  --figure-dir results/confusion_matrices \
   --table-dir results/tables
 
 uv run python main.py \
@@ -199,7 +231,7 @@ uv run python main.py \
 
 uv run python src/plot_results.py report-figures \
   --results-dir results \
-  --output-dir results/figures
+  --output-dir results/report_figures
 ```
 
 ## Version 0: Untrained Random Network
@@ -218,7 +250,7 @@ uv run python src/plot_results.py report-figures \
 | IRIS | 0.4667 |
 | MNIST quick | 0.1400 |
 
-结果来源：[classification_ablation_l2.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.md)
+结果来源：[classification_ablation_l2.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.json)
 
 复现命令：
 
@@ -226,8 +258,7 @@ uv run python src/plot_results.py report-figures \
 uv run python src/classification_experiments.py \
   --dataset all \
   --profile quick \
-  --output results/classification_ablation_l2.json \
-  --markdown-output results/classification_ablation_l2.md
+  --output results/classification_ablation_l2.json
 ```
 
 分析：MNIST 接近 10 类随机猜测水平；IRIS 高于 1/3 是随机初始化带来的类别偏置，
@@ -254,7 +285,7 @@ MNIST: 784 -> softmax(10)
 | IRIS | 0.9667 | 0.9417 |
 | MNIST quick | 0.8340 | 0.8500 |
 
-结果来源：[classification_ablation_l2.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.md)
+结果来源：[classification_ablation_l2.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.json)
 
 复现命令：
 
@@ -262,8 +293,7 @@ MNIST: 784 -> softmax(10)
 uv run python src/classification_experiments.py \
   --dataset all \
   --profile quick \
-  --output results/classification_ablation_l2.json \
-  --markdown-output results/classification_ablation_l2.md
+  --output results/classification_ablation_l2.json
 ```
 
 分析：这是“最简单可训练 baseline”，不是最弱模型。它已经完成了从零实现的 softmax、
@@ -291,7 +321,7 @@ MNIST: 784 -> ReLU(16) -> softmax(10)
 | IRIS | 0.9333 | 0.9583 |
 | MNIST quick | 0.7380 | 0.7690 |
 
-结果来源：[classification_ablation_l2.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.md)
+结果来源：[classification_ablation_l2.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.json)
 
 复现命令：
 
@@ -299,8 +329,7 @@ MNIST: 784 -> ReLU(16) -> softmax(10)
 uv run python src/classification_experiments.py \
   --dataset all \
   --profile quick \
-  --output results/classification_ablation_l2.json \
-  --markdown-output results/classification_ablation_l2.md
+  --output results/classification_ablation_l2.json
 ```
 
 分析：小隐藏层可以训练，但容量有限，尤其 MNIST 上 16 个隐藏单元不足。下一步需要增加
@@ -334,7 +363,7 @@ MNIST: 784 -> ReLU(128) -> softmax(10)
 
 结果来源：
 
-- quick/current：[classification_ablation_l2.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.md)
+- quick/current：[classification_ablation_l2.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_ablation_l2.json)
 - full current：[classification_nn_metrics.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_nn_metrics.json)
 
 复现命令：
@@ -343,8 +372,7 @@ MNIST: 784 -> ReLU(128) -> softmax(10)
 uv run python src/classification_experiments.py \
   --dataset all \
   --profile quick \
-  --output results/classification_ablation_l2.json \
-  --markdown-output results/classification_ablation_l2.md
+  --output results/classification_ablation_l2.json
 
 uv run python main.py \
   --dataset mnist \
@@ -389,7 +417,7 @@ Softmax + Cross-Entropy
 | MNIST quick | Sigmoid + MSE | 0.4230 | 0.5010 |
 | MNIST quick | Softmax + Cross-Entropy | 0.8180 | 0.8480 |
 
-完整结果：[loss_comparison.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/loss_comparison.md)
+完整结果：[loss_comparison.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/loss_comparison.json)
 
 复现命令：
 
@@ -397,8 +425,7 @@ Softmax + Cross-Entropy
 uv run python src/classification_experiments.py --suite loss-comparison \
   --dataset all \
   --profile quick \
-  --output results/loss_comparison.json \
-  --markdown-output results/loss_comparison.md
+  --output results/loss_comparison.json
 ```
 
 分析：`Softmax + Cross-Entropy` 在两个数据集上都更好，MNIST 差距尤其明显。因此后续
@@ -434,7 +461,7 @@ L2 扫描结果摘要：
 | MNIST quick | 1e-2 | 0.8160 | 0.8470 |
 | MNIST quick | 1e-1 | 0.8010 | 0.8200 |
 
-完整结果：[l2_sweep.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/l2_sweep.md)
+完整结果：[l2_sweep.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/l2_sweep.json)
 
 复现命令：
 
@@ -442,8 +469,7 @@ L2 扫描结果摘要：
 uv run python src/classification_experiments.py --suite l2-sweep \
   --dataset all \
   --profile quick \
-  --output results/l2_sweep.json \
-  --markdown-output results/l2_sweep.md
+  --output results/l2_sweep.json
 ```
 
 分析：小的 L2 对结果影响不大，`λ=1e-3` 在 MNIST quick 上只高 0.001，不能作为显著
@@ -458,7 +484,7 @@ uv run python src/classification_experiments.py --suite l2-sweep \
 | IRIS | `lr=0.05` 或 `0.1` | 验证准确率达到 0.9667 |
 | MNIST quick | `lr=0.1` | 验证准确率 0.8180，明显优于 0.001 和 0.01 |
 
-完整结果：[lr_sweep.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/lr_sweep.md)
+完整结果：[lr_sweep.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/lr_sweep.json)
 
 复现命令：
 
@@ -466,8 +492,7 @@ uv run python src/classification_experiments.py --suite l2-sweep \
 uv run python src/classification_experiments.py --suite lr-sweep \
   --dataset all \
   --profile quick \
-  --output results/lr_sweep.json \
-  --markdown-output results/lr_sweep.md
+  --output results/lr_sweep.json
 ```
 
 ### 隐藏层宽度
@@ -477,7 +502,7 @@ uv run python src/classification_experiments.py --suite lr-sweep \
 | IRIS | `hidden_dim=8` | 本次验证准确率 1.0000，但验证集小，需谨慎解释 |
 | MNIST quick | `hidden_dim=256` | 验证准确率 0.8400 |
 
-完整结果：[width_sweep.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/width_sweep.md)
+完整结果：[width_sweep.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/width_sweep.json)
 
 复现命令：
 
@@ -485,8 +510,7 @@ uv run python src/classification_experiments.py --suite lr-sweep \
 uv run python src/classification_experiments.py --suite width-sweep \
   --dataset all \
   --profile quick \
-  --output results/width_sweep.json \
-  --markdown-output results/width_sweep.md
+  --output results/width_sweep.json
 ```
 
 ### 训练策略
@@ -498,7 +522,7 @@ uv run python src/classification_experiments.py --suite width-sweep \
 | MNIST quick | LR decay | 0.8130 | 当前 decay 设置未提升 |
 | MNIST quick | early stopping | 0.8710 | 上限 20 epoch，提升也来自更长训练 |
 
-完整结果：[training_strategies.md](/home/cdf/optimization/MNIST-IRIS-Classification/results/training_strategies.md)
+完整结果：[training_strategies.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/training_strategies.json)
 
 复现命令：
 
@@ -506,8 +530,7 @@ uv run python src/classification_experiments.py --suite width-sweep \
 uv run python src/classification_experiments.py --suite training-strategies \
   --dataset all \
   --profile quick \
-  --output results/training_strategies.json \
-  --markdown-output results/training_strategies.md
+  --output results/training_strategies.json
 ```
 
 分析：MNIST quick 中 momentum 优于普通 5-epoch SGD。early stopping 的结果需要谨慎
@@ -542,7 +565,7 @@ initialization = He initialization
 结果来源：
 
 - [classification_nn_metrics.json](/home/cdf/optimization/MNIST-IRIS-Classification/results/classification_nn_metrics.json)
-- [iris_mlp_iris_val_confusion.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/iris_mlp_iris_val_confusion.png)
+- [iris_mlp_iris_val_confusion.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/confusion_matrices/iris_mlp_iris_val_confusion.pdf)
 - [iris_mlp_iris_val_confusion.csv](/home/cdf/optimization/MNIST-IRIS-Classification/results/tables/iris_mlp_iris_val_confusion.csv)
 
 复现命令：
@@ -563,7 +586,7 @@ uv run python main.py \
 uv run python src/plot_results.py confusion \
   --model results/models/iris_mlp.npz \
   --split val \
-  --figure-dir results/figures \
+  --figure-dir results/confusion_matrices \
   --table-dir results/tables
 ```
 
@@ -619,7 +642,7 @@ early_stopping_patience = 3
 | L2 1e-3 | 128 | sgd | 0.001 | 57 | 0.9731 | 0.1831 |
 | Width 256 + momentum, no L2 | 256 | momentum | 0 | 18 | 0.9784 | 0.0781 |
 
-对应图表：[report_mnist_final_tradeoff.png](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_final_tradeoff.png)
+对应图表：[report_mnist_final_tradeoff.pdf](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_final_tradeoff.pdf)
 
 统一调参后的最终结果：
 
@@ -705,20 +728,20 @@ uv run python main.py \
 
 报告叙事图：
 
-- [Method progression](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_method_progression.png)
-- [Cumulative ablation](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_cumulative_ablation.png)
-- [Loss function check](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_loss_function_check.png)
-- [L2 sweep](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_l2_sweep.png)
-- [Learning-rate sweep](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_learning_rate_sweep.png)
-- [Hidden-width sweep](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_hidden_width_sweep.png)
-- [Training strategies](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_training_strategies.png)
-- [Final tuning trade-off](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/report_mnist_final_tradeoff.png)
+- [Method progression](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_method_progression.pdf)
+- [Cumulative ablation](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_cumulative_ablation.pdf)
+- [Loss function check](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_loss_function_check.pdf)
+- [L2 sweep](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_l2_sweep.pdf)
+- [Learning-rate sweep](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_learning_rate_sweep.pdf)
+- [Hidden-width sweep](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_hidden_width_sweep.pdf)
+- [Training strategies](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_training_strategies.pdf)
+- [Final tuning trade-off](/home/cdf/optimization/MNIST-IRIS-Classification/results/report_figures/report_mnist_final_tradeoff.pdf)
 
 混淆矩阵：
 
-- [IRIS confusion matrix](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/iris_mlp_iris_val_confusion.png)
+- [IRIS confusion matrix](/home/cdf/optimization/MNIST-IRIS-Classification/results/confusion_matrices/iris_mlp_iris_val_confusion.pdf)
 - [IRIS confusion table](/home/cdf/optimization/MNIST-IRIS-Classification/results/tables/iris_mlp_iris_val_confusion.csv)
-- [MNIST quick confusion matrix](/home/cdf/optimization/MNIST-IRIS-Classification/results/figures/mnist_mlp_mnist_val_confusion.png)
+- [MNIST quick confusion matrix](/home/cdf/optimization/MNIST-IRIS-Classification/results/confusion_matrices/mnist_mlp_mnist_val_confusion.pdf)
 - [MNIST quick confusion table](/home/cdf/optimization/MNIST-IRIS-Classification/results/tables/mnist_mlp_mnist_val_confusion.csv)
 
 ## CNN Extension

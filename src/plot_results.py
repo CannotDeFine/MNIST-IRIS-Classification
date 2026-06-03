@@ -4,8 +4,11 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 from pathlib import Path
 from typing import Any
+
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
@@ -22,6 +25,10 @@ except ImportError:  # pragma: no cover - direct script execution.
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT / "results"
+CURVES_DIR = RESULTS_DIR / "learning_curves"
+CONFUSION_FIGURE_DIR = RESULTS_DIR / "confusion_matrices"
+TABLES_DIR = RESULTS_DIR / "tables"
+REPORT_FIGURE_DIR = RESULTS_DIR / "report_figures"
 INK = "black"
 GRID = "grey"
 BLUE = "#98A1B1"
@@ -178,7 +185,7 @@ def plot_metric_comparison(
         for idx, value in enumerate(values):
             ax.text(value + 0.002, idx, f"{value:.4f}", va="center", fontsize=8)
         fig.tight_layout()
-        path = output_dir / f"{output_prefix}_val_accuracy.png"
+        path = output_dir / f"{output_prefix}_val_accuracy.pdf"
         fig.savefig(path)
         plt.close(fig)
         outputs.append(path)
@@ -197,7 +204,7 @@ def plot_metric_comparison(
         for idx, value in enumerate(values):
             ax.text(value + max(values) * 0.015 + 0.02, idx, f"{int(value)}", va="center", fontsize=8)
         fig.tight_layout()
-        path = output_dir / f"{output_prefix}_epochs_trained.png"
+        path = output_dir / f"{output_prefix}_epochs_trained.pdf"
         fig.savefig(path)
         plt.close(fig)
         outputs.append(path)
@@ -253,12 +260,10 @@ def _panel_label(ax, label: str) -> None:
     )
 
 
-def _save_figure_pair(fig, output_dir: Path, stem: str) -> list[Path]:
-    png = output_dir / f"{stem}.png"
+def _save_pdf_figure(fig, output_dir: Path, stem: str) -> list[Path]:
     pdf = output_dir / f"{stem}.pdf"
-    fig.savefig(png, bbox_inches="tight")
     fig.savefig(pdf, bbox_inches="tight")
-    return [png, pdf]
+    return [pdf]
 
 
 def _style_axes(ax) -> None:
@@ -272,10 +277,7 @@ def _style_axes(ax) -> None:
 
 
 def _save_single_report_figure(fig, output_dir: Path, stem: str) -> list[Path]:
-    paths = _save_figure_pair(fig, output_dir, stem)
-    # Keep the PNG as the first-class report artifact while preserving a PDF
-    # for final document assembly.
-    return paths
+    return _save_pdf_figure(fig, output_dir, stem)
 
 
 def plot_report_figures(results_dir: Path, output_dir: Path) -> list[Path]:
@@ -557,7 +559,7 @@ def plot_learning_curves(metrics_path: Path, output_dir: Path) -> list[Path]:
         stem = f"{metrics_path.stem}_{dataset}"
         epochs = np.arange(len(history["loss"]))
 
-        loss_path = output_dir / f"{stem}_loss.png"
+        loss_path = output_dir / f"{stem}_loss.pdf"
         plt.figure(figsize=(7, 4))
         plt.plot(epochs, history["loss"], label="train")
         if "val_loss" in history:
@@ -567,11 +569,11 @@ def plot_learning_curves(metrics_path: Path, output_dir: Path) -> list[Path]:
         plt.title(f"{dataset} loss")
         plt.legend()
         plt.tight_layout()
-        plt.savefig(loss_path, dpi=160)
+        plt.savefig(loss_path, bbox_inches="tight")
         plt.close()
         outputs.append(loss_path)
 
-        acc_path = output_dir / f"{stem}_accuracy.png"
+        acc_path = output_dir / f"{stem}_accuracy.pdf"
         plt.figure(figsize=(7, 4))
         plt.plot(epochs, history["accuracy"], label="train")
         if "val_accuracy" in history:
@@ -581,9 +583,87 @@ def plot_learning_curves(metrics_path: Path, output_dir: Path) -> list[Path]:
         plt.title(f"{dataset} accuracy")
         plt.legend()
         plt.tight_layout()
-        plt.savefig(acc_path, dpi=160)
+        plt.savefig(acc_path, bbox_inches="tight")
         plt.close()
         outputs.append(acc_path)
+    return outputs
+
+
+def _curve_label(item: dict[str, Any]) -> str:
+    name = str(item.get("name", item.get("dataset", "model")))
+    labels = {
+        "mnist_strategy_sgd": "SGD",
+        "mnist_strategy_momentum": "Momentum",
+        "mnist_strategy_lr_decay": "LR Decay",
+        "mnist_strategy_early_stopping": "Early Stopping",
+    }
+    return labels.get(name, name.replace("_", " "))
+
+
+def plot_validation_curves(
+    metrics_path: Path,
+    output_dir: Path,
+    output_prefix: str,
+    dataset: str | None = None,
+    include_names: set[str] | None = None,
+) -> list[Path]:
+    """Plot validation accuracy and loss curves for multiple runs in one metrics file."""
+    _apply_paper_style()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    items = []
+    for item in _load_metrics(metrics_path):
+        history = item.get("history", {})
+        if "val_accuracy" not in history or "val_loss" not in history:
+            continue
+        if dataset is not None and item.get("dataset") != dataset:
+            continue
+        if include_names is not None and item.get("name") not in include_names:
+            continue
+        items.append(item)
+    if not items:
+        raise ValueError("no matching validation curves found")
+
+    outputs: list[Path] = []
+    styles = [
+        (RED, "o"),
+        (BLUE, "s"),
+        (GREEN, "D"),
+        (GOLD, "^"),
+        (PURPLE, "v"),
+        (GRAY, "P"),
+    ]
+    plots = [
+        ("val_accuracy", "Validation Accuracy", "Val. Acc.", f"{output_prefix}_val_accuracy.pdf"),
+        ("val_loss", "Validation Loss", "Val. Loss", f"{output_prefix}_val_loss.pdf"),
+    ]
+    for metric, title, ylabel, filename in plots:
+        fig, ax = plt.subplots(figsize=(3.6, 2.0))
+        for idx, item in enumerate(items):
+            values = item["history"][metric]
+            epochs = np.arange(len(values))
+            color, marker = styles[idx % len(styles)]
+            markevery = max(1, len(values) // 10)
+            ax.plot(
+                epochs,
+                values,
+                color=color,
+                marker=marker,
+                markevery=markevery,
+                markersize=3.0,
+                linewidth=1.2,
+                label=_curve_label(item),
+                zorder=3,
+            )
+        ax.set_xlabel("Epoch", fontsize=8, fontweight="bold")
+        ax.set_ylabel(ylabel, fontsize=8, fontweight="bold")
+        ax.set_title(title, fontsize=8, fontweight="bold")
+        ax.legend(loc="best", fontsize=6.2, handlelength=1.2, handletextpad=0.35)
+        _style_axes(ax)
+        fig.tight_layout()
+        path = output_dir / filename
+        fig.savefig(path, bbox_inches="tight")
+        plt.close(fig)
+        outputs.append(path)
     return outputs
 
 
@@ -605,7 +685,7 @@ def save_confusion_outputs(
     table_dir: Path,
     mnist_limit: int | None = None,
 ) -> tuple[Path, Path]:
-    """Save confusion matrix as CSV and heatmap PNG for a checkpoint."""
+    """Save confusion matrix as CSV and heatmap PDF for a checkpoint."""
     figure_dir.mkdir(parents=True, exist_ok=True)
     table_dir.mkdir(parents=True, exist_ok=True)
     model, dataset, X, y = _checkpoint_split(checkpoint, split, mnist_limit=mnist_limit)
@@ -621,7 +701,7 @@ def save_confusion_outputs(
         for idx, row in enumerate(matrix):
             writer.writerow([idx] + row.tolist() + [float(class_acc[idx])])
 
-    png_path = figure_dir / f"{stem}.png"
+    pdf_path = figure_dir / f"{stem}.pdf"
     plt.figure(figsize=(6, 5))
     plt.imshow(matrix, cmap="Blues")
     plt.title(f"{dataset} {split} confusion matrix")
@@ -632,9 +712,9 @@ def save_confusion_outputs(
         for j in range(matrix.shape[1]):
             plt.text(j, i, str(matrix[i, j]), ha="center", va="center", fontsize=8)
     plt.tight_layout()
-    plt.savefig(png_path, dpi=160)
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close()
-    return csv_path, png_path
+    return csv_path, pdf_path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -643,25 +723,32 @@ def build_parser() -> argparse.ArgumentParser:
 
     curves = subparsers.add_parser("curves", help="Plot learning curves from a metrics JSON file.")
     curves.add_argument("--metrics", type=Path, required=True)
-    curves.add_argument("--output-dir", type=Path, default=RESULTS_DIR / "figures")
+    curves.add_argument("--output-dir", type=Path, default=CURVES_DIR)
+
+    val_curves = subparsers.add_parser("validation-curves", help="Plot combined validation curves.")
+    val_curves.add_argument("--metrics", type=Path, required=True)
+    val_curves.add_argument("--dataset", choices=["iris", "mnist"], default=None)
+    val_curves.add_argument("--include", nargs="*", default=None, help="Optional experiment names to include.")
+    val_curves.add_argument("--output-dir", type=Path, default=CURVES_DIR)
+    val_curves.add_argument("--output-prefix", default="validation_curves")
 
     confusion = subparsers.add_parser("confusion", help="Plot confusion matrix from a saved checkpoint.")
     confusion.add_argument("--model", type=Path, required=True)
     confusion.add_argument("--split", choices=["train", "val"], default="val")
     confusion.add_argument("--mnist-limit", type=int, default=None)
-    confusion.add_argument("--figure-dir", type=Path, default=RESULTS_DIR / "figures")
-    confusion.add_argument("--table-dir", type=Path, default=RESULTS_DIR / "tables")
+    confusion.add_argument("--figure-dir", type=Path, default=CONFUSION_FIGURE_DIR)
+    confusion.add_argument("--table-dir", type=Path, default=TABLES_DIR)
 
     comparison = subparsers.add_parser("comparison", help="Plot paper-style metric comparison charts.")
     comparison.add_argument("--metrics", type=Path, nargs="+", required=True)
     comparison.add_argument("--dataset", choices=["iris", "mnist"], default=None)
-    comparison.add_argument("--output-dir", type=Path, default=RESULTS_DIR / "figures")
+    comparison.add_argument("--output-dir", type=Path, default=RESULTS_DIR / "comparisons")
     comparison.add_argument("--output-prefix", default="model_comparison")
     comparison.add_argument("--title", default=None)
 
     report = subparsers.add_parser("report-figures", help="Generate narrative report figures.")
     report.add_argument("--results-dir", type=Path, default=RESULTS_DIR)
-    report.add_argument("--output-dir", type=Path, default=RESULTS_DIR / "figures")
+    report.add_argument("--output-dir", type=Path, default=REPORT_FIGURE_DIR)
     return parser
 
 
@@ -671,9 +758,19 @@ def main(argv: list[str] | None = None) -> None:
         outputs = plot_learning_curves(args.metrics, args.output_dir)
         for path in outputs:
             print(f"saved {path}")
+    elif args.command == "validation-curves":
+        outputs = plot_validation_curves(
+            metrics_path=args.metrics,
+            output_dir=args.output_dir,
+            output_prefix=args.output_prefix,
+            dataset=args.dataset,
+            include_names=set(args.include) if args.include else None,
+        )
+        for path in outputs:
+            print(f"saved {path}")
     elif args.command == "confusion":
         metrics = evaluate_checkpoint(args.model, split=args.split, mnist_limit=args.mnist_limit)
-        csv_path, png_path = save_confusion_outputs(
+        csv_path, figure_path = save_confusion_outputs(
             args.model,
             split=args.split,
             figure_dir=args.figure_dir,
@@ -685,7 +782,7 @@ def main(argv: list[str] | None = None) -> None:
             f"loss={metrics['loss']:.4f}, acc={metrics['accuracy']:.4f}, count={metrics['count']}"
         )
         print(f"saved {csv_path}")
-        print(f"saved {png_path}")
+        print(f"saved {figure_path}")
     elif args.command == "comparison":
         outputs = plot_metric_comparison(
             metrics_paths=args.metrics,

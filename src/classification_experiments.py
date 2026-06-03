@@ -715,6 +715,7 @@ def build_training_strategy_configs(dataset: str, profile: str = "quick") -> lis
     if dataset == "mnist":
         train_limit = 1000 if profile == "quick" else None
         val_limit = 1000 if profile == "quick" else None
+        epochs = 5 if profile == "quick" else 100
         return [
             ExperimentConfig(
                 name="mnist_strategy_sgd",
@@ -722,7 +723,7 @@ def build_training_strategy_configs(dataset: str, profile: str = "quick") -> lis
                 model_type="mlp",
                 description="Current MNIST MLP with plain mini-batch SGD.",
                 ablates="training strategy",
-                epochs=5,
+                epochs=epochs,
                 hidden_dim=128,
                 learning_rate=0.1,
                 batch_size=128,
@@ -735,7 +736,7 @@ def build_training_strategy_configs(dataset: str, profile: str = "quick") -> lis
                 model_type="mlp",
                 description="Current MNIST MLP trained with momentum SGD.",
                 ablates="plain SGD",
-                epochs=5,
+                epochs=epochs,
                 hidden_dim=128,
                 learning_rate=0.05,
                 batch_size=128,
@@ -750,7 +751,7 @@ def build_training_strategy_configs(dataset: str, profile: str = "quick") -> lis
                 model_type="mlp",
                 description="Current MNIST MLP with inverse learning-rate decay.",
                 ablates="constant learning rate",
-                epochs=5,
+                epochs=epochs,
                 hidden_dim=128,
                 learning_rate=0.1,
                 batch_size=128,
@@ -764,7 +765,7 @@ def build_training_strategy_configs(dataset: str, profile: str = "quick") -> lis
                 model_type="mlp",
                 description="Current MNIST MLP with validation-loss early stopping.",
                 ablates="fixed epoch count",
-                epochs=20,
+                epochs=20 if profile == "quick" else 100,
                 hidden_dim=128,
                 learning_rate=0.1,
                 batch_size=128,
